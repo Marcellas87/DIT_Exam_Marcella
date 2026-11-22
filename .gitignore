@@ -3,3 +3,4 @@ vendor/
 node_modules/
 storage/payment_proofs/*
 !storage/payment_proofs/.gitkeep
+.phpunit.result.cache
