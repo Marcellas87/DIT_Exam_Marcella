@@ -64,3 +64,13 @@ logic error (program runs but the result is wrong; the hardest one, so unit test
 | Identify | The XAMPP MySQL data folder had Aria log files that caused the error on GRANT; the GRANT statement was not needed for local work. |
 | Fix | The GRANT was removed from `garage_rental.sql`; the app connects as `root` locally. Damaged `aria_log*` files can be deleted with MySQL stopped. |
 | Verify | The import finished and the app connected. |
+
+## Bug 7: report tests stopped after the NOT NULL change (runtime error)
+| Step | What was done |
+|---|---|
+| Reproduce | `php tests/report_tests.php` stopped before any result: `PDOException SQLSTATE[23000] 1048: Column 'payment_proof_path' cannot be null` at `report_tests.php:111`. |
+| Isolate | All other suites passed, including `extension_flow_tests.php`, which saves extensions through the app. Only this test file failed, in its set-up step. |
+| Identify | `rental_extensions.payment_proof_path` had just been changed to NOT NULL (the admin must upload a payment proof). The report test inserts two sample extensions directly with SQL and passed `null` as the proof. The app was correct; the test data was not. |
+| Fix | Lines 111–112 of `tests/report_tests.php` now pass a placeholder name (`'test-proof.png'`). The report test only checks totals and never opens the image. |
+| Verify | `php tests/report_tests.php`: 29 of 29 pass. |
+| Lesson | When a database rule is made stricter, run every test suite again: test set-up code may insert data the new rule refuses. |
