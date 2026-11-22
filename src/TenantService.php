@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 /**
  * Admin decisions about tenant registrations.
+ *
+ * Relations: reads and updates the tenants table (rows created by AuthService::register()).
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class TenantService
 {
@@ -49,7 +54,7 @@ final class TenantService
      *              (already decided, or no such tenant)
      * @throws InvalidArgumentException if the decision is not accepted/rejected
      */
-    public function decide(int $userId, string $decision): bool
+    public function decideRegistration(int $userId, string $decision): bool
     {
         if (!in_array($decision, self::DECISIONS, true)) {
             throw new InvalidArgumentException('Decision must be "accepted" or "rejected".');

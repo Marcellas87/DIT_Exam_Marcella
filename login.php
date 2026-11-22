@@ -5,7 +5,7 @@ require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/AuthService.php';
 require_once __DIR__ . '/src/helpers.php';
 
-if (currentUser() !== null) {
+if (getCurrentUser() !== null) {
     header('Location: index.php');
     exit;
 }
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Wrong email or password.';
         }
     } catch (Throwable $e) {
-        error_log($e->getMessage());
+        error_log((string)$e);   // message + file + stack trace, for debugging
         $error = $e instanceof RuntimeException ? $e->getMessage() : 'Login failed. Please try again.';
     }
 }
@@ -54,13 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <main>
     <h1>Garage Rental: log in</h1>
-    <?php if ($info !== ''): ?><p class="flash" role="status"><?= e($info) ?></p><?php endif; ?>
-    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= e($error) ?></p><?php endif; ?>
+    <?php if ($info !== ''): ?><p class="flash" role="status"><?= escapeHtml($info) ?></p><?php endif; ?>
+    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= escapeHtml($error) ?></p><?php endif; ?>
 
     <form method="post" class="card">
         <div class="field">
             <label for="email">Email</label>
-            <input type="text" id="email" name="email" value="<?= e($email) ?>" autocomplete="username" required>
+            <input type="text" id="email" name="email" value="<?= escapeHtml($email) ?>" autocomplete="username" required>
         </div>
         <div class="field">
             <label for="password">Password</label>

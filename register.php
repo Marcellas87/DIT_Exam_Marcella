@@ -5,7 +5,7 @@ require_once __DIR__ . '/src/Database.php';
 require_once __DIR__ . '/src/AuthService.php';
 require_once __DIR__ . '/src/helpers.php';
 
-if (currentUser() !== null) {
+if (getCurrentUser() !== null) {
     header('Location: index.php');
     exit;
 }
@@ -33,27 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     } catch (Throwable $e) {
-        error_log($e->getMessage());
+        error_log((string)$e);   // message + file + stack trace, for debugging
         $fatal = $e instanceof RuntimeException ? $e->getMessage() : 'Registration failed. Please try again.';
     }
 }
 
-/**
- * Prints the error text under a form field, if there is one.
- *
- * @param array<string, string> $errors error messages by field name
- * @param string $field the field to print the error for
- * @return void
- */
-function fieldError(array $errors, string $field): void
-{
-    if (isset($errors[$field])) {
-        echo '<p class="error-text">' . e($errors[$field]) . '</p>';
-    }
-}
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,38 +50,38 @@ function fieldError(array $errors, string $field): void
 <body>
 <main>
     <h1>Register as tenant</h1>
-    <?php if ($fatal !== ''): ?><p class="flash error" role="alert"><?= e($fatal) ?></p><?php endif; ?>
+    <?php if ($fatal !== ''): ?><p class="flash error" role="alert"><?= escapeHtml($fatal) ?></p><?php endif; ?>
 
     <form method="post" class="card" novalidate>
         <div class="field">
             <label for="nik">NIK (KTP number)</label>
-            <input type="text" id="nik" name="nik" value="<?= e($old['nik']) ?>" inputmode="numeric" maxlength="16" required>
-            <?php fieldError($errors, 'nik'); ?>
+            <input type="text" id="nik" name="nik" value="<?= escapeHtml($old['nik']) ?>" inputmode="numeric" maxlength="16" required>
+            <?php printFieldError($errors, 'nik'); ?>
         </div>
         <div class="field">
             <label for="full_name">Full name</label>
-            <input type="text" id="full_name" name="full_name" value="<?= e($old['full_name']) ?>" maxlength="100" required>
-            <?php fieldError($errors, 'full_name'); ?>
+            <input type="text" id="full_name" name="full_name" value="<?= escapeHtml($old['full_name']) ?>" maxlength="100" required>
+            <?php printFieldError($errors, 'full_name'); ?>
         </div>
         <div class="field">
             <label for="phone">Phone number</label>
-            <input type="text" id="phone" name="phone" value="<?= e($old['phone']) ?>" inputmode="tel" maxlength="16" required>
-            <?php fieldError($errors, 'phone'); ?>
+            <input type="text" id="phone" name="phone" value="<?= escapeHtml($old['phone']) ?>" inputmode="tel" maxlength="16" required>
+            <?php printFieldError($errors, 'phone'); ?>
         </div>
         <div class="field">
             <label for="email">Email (your username)</label>
-            <input type="text" id="email" name="email" value="<?= e($old['email']) ?>" maxlength="100" autocomplete="username" required>
-            <?php fieldError($errors, 'email'); ?>
+            <input type="text" id="email" name="email" value="<?= escapeHtml($old['email']) ?>" maxlength="100" autocomplete="username" required>
+            <?php printFieldError($errors, 'email'); ?>
         </div>
         <div class="field">
             <label for="password">Password (at least 8 characters)</label>
             <input type="password" id="password" name="password" autocomplete="new-password" required>
-            <?php fieldError($errors, 'password'); ?>
+            <?php printFieldError($errors, 'password'); ?>
         </div>
         <div class="field">
             <label for="password_confirm">Repeat password</label>
             <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" required>
-            <?php fieldError($errors, 'password_confirm'); ?>
+            <?php printFieldError($errors, 'password_confirm'); ?>
         </div>
         <button type="submit">Register</button>
         <a class="btn btn-plain" href="login.php">I already have an account</a>

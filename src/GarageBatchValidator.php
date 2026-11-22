@@ -1,13 +1,19 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/Vehicle.php';
+
 /**
  * Validates the "create garages" form. No database code.
+ *
+ * Relations: uses Vehicle::GARAGE_ELECTRIC_CAR; called by GarageService.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class GarageBatchValidator
 {
     public const MAX_COUNT = 999;
-    public const ELECTRIC_TYPE = 'electric car';
 
     /**
      * Rules:
@@ -34,7 +40,7 @@ final class GarageBatchValidator
             $errors['daily_price'] = 'Daily price must be a positive amount with at most 2 decimals (example: 50000).';
         }
 
-        if ($typeName === self::ELECTRIC_TYPE && !self::isMoney(trim((string)($data['kwh_price'] ?? '')))) {
+        if ($typeName === Vehicle::GARAGE_ELECTRIC_CAR && !self::isMoney(trim((string)($data['kwh_price'] ?? '')))) {
             $errors['kwh_price'] = 'Electricity price per kWh is required for electric car garages (positive amount).';
         }
 

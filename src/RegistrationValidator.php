@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 /**
  * Validates the tenant registration form. No database code, so it is easy to unit test.
+ *
+ * Relations: called by AuthService::register() before anything is saved.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class RegistrationValidator
 {

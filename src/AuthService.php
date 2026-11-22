@@ -5,6 +5,12 @@ require_once __DIR__ . '/RegistrationValidator.php';
 
 /**
  * Registration and login rules.
+ *
+ * Relations: uses RegistrationValidator (form rules); writes the users and tenants tables.
+ * TenantService later accepts or rejects the tenants created here.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class AuthService
 {
@@ -39,10 +45,10 @@ final class AuthService
         $email = strtolower(trim((string)$input['email']));
         $nik = trim((string)$input['nik']);
 
-        if ($this->exists('SELECT 1 FROM users WHERE email = :v', $email)) {
+        if ($this->rowExists('SELECT 1 FROM users WHERE email = :v', $email)) {
             $errors['email'] = 'This email is already registered.';
         }
-        if ($this->exists('SELECT 1 FROM tenants WHERE nik = :v', $nik)) {
+        if ($this->rowExists('SELECT 1 FROM tenants WHERE nik = :v', $nik)) {
             $errors['nik'] = 'This NIK is already registered.';
         }
         if (count($errors) > 0) {
@@ -139,7 +145,7 @@ final class AuthService
      * @param string $value the value for :v
      * @return bool true if a row exists
      */
-    private function exists(string $sql, string $value): bool
+    private function rowExists(string $sql, string $value): bool
     {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['v' => $value]);

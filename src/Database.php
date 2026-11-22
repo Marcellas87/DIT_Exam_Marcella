@@ -5,6 +5,11 @@ require_once __DIR__ . '/../config.php';
 
 /**
  * Creates the PDO connection to MySQL/MariaDB.
+ *
+ * Relations: reads the DB_* settings from config.php; every service receives the PDO object it returns.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class Database
 {

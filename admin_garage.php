@@ -36,7 +36,7 @@ try {
                 $_SESSION['flash'] = $result['count'] === 1
                     ? 'Created 1 garage: ' . $result['first'] . '.'
                     : 'Created ' . $result['count'] . ' garages: ' . $result['first'] . ' to ' . $result['last'] . '.';
-                header('Location: admin_garages.php');
+                header('Location: admin_garage.php');
                 exit;
             }
             $errors = $result['errors'];
@@ -44,27 +44,14 @@ try {
     }
 
     $types = $service->findTypes();
-    $summary = $service->summary();
+    $summary = $service->findSummary();
 } catch (Throwable $e) {
-    error_log($e->getMessage());
+    error_log((string)$e);   // message + file + stack trace, for debugging
     $error = $e instanceof RuntimeException ? $e->getMessage() : 'Something went wrong. Please try again.';
 }
 
-$token = csrfToken();
+$token = getCsrfToken();
 
-/**
- * Prints the error text under a form field, if there is one.
- *
- * @param array<string, string> $errors error messages by field name
- * @param string $field the field to print the error for
- * @return void
- */
-function fieldError(array $errors, string $field): void
-{
-    if (isset($errors[$field])) {
-        echo '<p class="error-text">' . e($errors[$field]) . '</p>';
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,11 +71,11 @@ function fieldError(array $errors, string $field): void
     <h1>Create garages</h1>
     <p class="muted">IDs are made automatically: S + 3 digits for bicycle, C for car, E for electric car. Numbering continues from the last garage of the same type.</p>
 
-    <?php if ($flash !== ''): ?><p class="flash" role="status"><?= e($flash) ?></p><?php endif; ?>
-    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= e($error) ?></p><?php endif; ?>
+    <?php if ($flash !== ''): ?><p class="flash" role="status"><?= escapeHtml($flash) ?></p><?php endif; ?>
+    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= escapeHtml($error) ?></p><?php endif; ?>
 
     <form method="post" class="card stack" novalidate>
-        <input type="hidden" name="csrf" value="<?= e($token) ?>">
+        <input type="hidden" name="csrf" value="<?= escapeHtml($token) ?>">
 
         <div class="field">
             <label for="garage_type_id">Garage type</label>
@@ -96,32 +83,32 @@ function fieldError(array $errors, string $field): void
                 <option value="">Choose a type</option>
                 <?php foreach ($types as $type): ?>
                     <option value="<?= (int)$type['id'] ?>"
-                            data-electric="<?= $type['name'] === GarageBatchValidator::ELECTRIC_TYPE ? '1' : '0' ?>"
+                            data-electric="<?= $type['name'] === Vehicle::GARAGE_ELECTRIC_CAR ? '1' : '0' ?>"
                             <?= (string)$old['garage_type_id'] === (string)$type['id'] ? 'selected' : '' ?>>
-                        <?= e(ucfirst($type['name'])) ?>
+                        <?= escapeHtml(ucfirst($type['name'])) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
-            <?php fieldError($errors, 'garage_type_id'); ?>
+            <?php printFieldError($errors, 'garage_type_id'); ?>
         </div>
 
         <div class="field">
             <label for="count">Number of garages (1 to 999)</label>
-            <input type="number" id="count" name="count" min="1" max="999" value="<?= e($old['count']) ?>" required>
-            <?php fieldError($errors, 'count'); ?>
+            <input type="number" id="count" name="count" min="1" max="999" value="<?= escapeHtml($old['count']) ?>" required>
+            <?php printFieldError($errors, 'count'); ?>
         </div>
 
         <div class="field">
             <label for="daily_price">Daily rental price</label>
-            <input type="text" id="daily_price" name="daily_price" inputmode="decimal" value="<?= e($old['daily_price']) ?>" required>
+            <input type="text" id="daily_price" name="daily_price" inputmode="decimal" value="<?= escapeHtml($old['daily_price']) ?>" required>
             <p class="muted">The monthly price is always 25 &times; the daily price.</p>
-            <?php fieldError($errors, 'daily_price'); ?>
+            <?php printFieldError($errors, 'daily_price'); ?>
         </div>
 
         <div class="field" id="kwh-field">
             <label for="kwh_price">Electricity price per kWh (electric car garages only)</label>
-            <input type="text" id="kwh_price" name="kwh_price" inputmode="decimal" value="<?= e($old['kwh_price']) ?>">
-            <?php fieldError($errors, 'kwh_price'); ?>
+            <input type="text" id="kwh_price" name="kwh_price" inputmode="decimal" value="<?= escapeHtml($old['kwh_price']) ?>">
+            <?php printFieldError($errors, 'kwh_price'); ?>
         </div>
 
         <button type="submit">Create garages</button>
@@ -137,11 +124,11 @@ function fieldError(array $errors, string $field): void
                 <tbody>
                 <?php foreach ($summary as $row): ?>
                     <tr>
-                        <td><?= e(ucfirst($row['type_name'])) ?></td>
-                        <td><?= e(number_format((float)$row['daily_price'], 2, '.', ',')) ?></td>
-                        <td><?= $row['kwh_price'] === null ? '-' : e(number_format((float)$row['kwh_price'], 2, '.', ',')) ?></td>
+                        <td><?= escapeHtml(ucfirst($row['type_name'])) ?></td>
+                        <td><?= escapeHtml(number_format((float)$row['daily_price'], 2, '.', ',')) ?></td>
+                        <td><?= $row['kwh_price'] === null ? '-' : escapeHtml(number_format((float)$row['kwh_price'], 2, '.', ',')) ?></td>
                         <td><?= (int)$row['total'] ?></td>
-                        <td><?= e($row['first_id']) ?><?= $row['first_id'] !== $row['last_id'] ? ' to ' . e($row['last_id']) : '' ?></td>
+                        <td><?= escapeHtml($row['first_id']) ?><?= $row['first_id'] !== $row['last_id'] ? ' to ' . escapeHtml($row['last_id']) : '' ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

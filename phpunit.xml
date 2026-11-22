@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PHPUnit settings. Run:  vendor/bin/phpunit  (these tests need no database) -->
+<phpunit bootstrap="tests/phpunit/bootstrap.php" colors="true" failOnWarning="true">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>tests/phpunit</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

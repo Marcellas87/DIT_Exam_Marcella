@@ -8,16 +8,23 @@ declare(strict_types=1);
  * Money is calculated in whole cents (integers), never with float,
  * so 0.1 + 0.2 style rounding errors cannot happen.
  *
- * ASSUMPTIONS (confirm with the assessor, each is in ONE place so it is easy to change):
+ * ASSUMPTIONS:
  *  1. Start date is today. The end date is the day the garage is free again:
  *     daily   = start + number of days;
- *     monthly = start + number of days in the START month
- *               (ex: 31 Jan 2027 gives 3 Mar, 31 Jan 2028 gives 2 Mar, 21 Nov gives 21 Dec).
+ *     monthly = start + number of days in the START month (assessor's answer:
+ *               31 Jan 2027 gives 3 Mar, 31 Jan 2028 gives 2 Mar, 21 Nov gives 21 Dec).
  *  2. Daily limit = days in the start month minus 1, so a daily rental is always
  *     shorter than a monthly one (announced separately from the PDF).
  *  3. The full-charge fee is charged ONCE per rental:
  *     battery capacity (kWh) x price per kWh, only for an electric car in an electric garage.
  *  4. Monthly price = 25 x daily price, whatever the month length.
+ *  5. Extension: each extra day costs the daily price saved with the rental (see calculateExtensionCents).
+ *
+ * Relations: reads Vehicle objects (battery, garage rule); used by RentalService,
+ * ExtensionService and ReportService.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class RentalRules
 {
@@ -32,7 +39,7 @@ final class RentalRules
      * @param DateTimeImmutable $start the start date of the rental
      * @return int the largest allowed number of days
      */
-    public static function maxDailyDays(DateTimeImmutable $start): int
+    public static function getMaxDailyDays(DateTimeImmutable $start): int
     {
         return (int)$start->format('t') - 1;
     }
@@ -40,7 +47,7 @@ final class RentalRules
     /**
      * Rules:
      * - rental_type: "daily" or "monthly"
-     * - days: required for daily, a whole number from 1 to maxDailyDays();
+     * - days: required for daily, a whole number from 1 to getMaxDailyDays();
      *   for monthly it is ignored
      *
      * @param array<string, mixed> $data rental_type, days
@@ -55,10 +62,10 @@ final class RentalRules
         }
 
         if ($type === self::TYPE_DAILY) {
-            $max = self::maxDailyDays($start);
+            $maxDays = self::getMaxDailyDays($start);
             $days = trim((string)($data['days'] ?? ''));
-            if (filter_var($days, FILTER_VALIDATE_INT) === false || (int)$days < 1 || (int)$days > $max) {
-                return ['days' => 'Number of days must be a whole number from 1 to ' . $max . ' (this month has ' . $start->format('t') . ' days).'];
+            if (filter_var($days, FILTER_VALIDATE_INT) === false || (int)$days < 1 || (int)$days > $maxDays) {
+                return ['days' => 'Number of days must be a whole number from 1 to ' . $maxDays . ' (this month has ' . $start->format('t') . ' days).'];
             }
         }
 
@@ -70,7 +77,7 @@ final class RentalRules
      *
      * - Daily: start date + number of days.
      * - Monthly: start date + the number of days of the START month
-     *            (30 for November, 28 or 29 for February, 31 for January).
+     *   (30 for November, 28 or 29 for February, 31 for January).
      *   Example: 31 January 2027 + 31 days = 3 March 2027.
      *
      * @param DateTimeImmutable $start the start date (time of day is ignored)
@@ -79,7 +86,7 @@ final class RentalRules
      * @return DateTimeImmutable the end date at 00:00
      * @throws InvalidArgumentException if a daily rental has no days, or the type is unknown
      */
-    public static function endDate(DateTimeImmutable $start, string $rentalType, ?int $days): DateTimeImmutable
+    public static function calculateEndDate(DateTimeImmutable $start, string $rentalType, ?int $days): DateTimeImmutable
     {
         $start = $start->setTime(0, 0);
 
@@ -106,7 +113,7 @@ final class RentalRules
      * @return int the rental price in cents (without charging fee)
      * @throws InvalidArgumentException if the type is unknown or a daily rental has no days
      */
-    public static function rentalCents(int $dailyCents, string $rentalType, ?int $days): int
+    public static function calculateRentalCents(int $dailyCents, string $rentalType, ?int $days): int
     {
         if ($rentalType === self::TYPE_MONTHLY) {
             return self::MONTHLY_MULTIPLIER * $dailyCents;
@@ -127,17 +134,17 @@ final class RentalRules
      * @return int the charging fee in cents (0 when nothing is charged)
      * @throws InvalidArgumentException if an electric garage has no kWh price
      */
-    public static function chargingFeeCents(Vehicle $vehicle, string $garageTypeName, ?int $kwhPriceCents): int
+    public static function calculateChargingFeeCents(Vehicle $vehicle, string $garageTypeName, ?int $kwhPriceCents): int
     {
-        $battery = $vehicle->batteryHundredths();
-        if ($battery === null || $garageTypeName !== Vehicle::GARAGE_ELECTRIC) {
+        $batteryHundredths = $vehicle->getBatteryHundredths();
+        if ($batteryHundredths === null || $garageTypeName !== Vehicle::GARAGE_ELECTRIC_CAR) {
             return 0;
         }
         if ($kwhPriceCents === null) {
             throw new InvalidArgumentException('This electric garage has no kWh price.');
         }
         // battery is in hundredths of kWh, so divide by 100 and round half up.
-        return intdiv($battery * $kwhPriceCents + 50, 100);
+        return intdiv($batteryHundredths * $kwhPriceCents + 50, 100);
     }
 
     /**
@@ -152,7 +159,7 @@ final class RentalRules
      * @return array{rental:string,charging:string,total:string}
      * @throws InvalidArgumentException if an amount, the type or the days are invalid
      */
-    public static function totals(
+    public static function calculateTotals(
         Vehicle $vehicle,
         string $garageTypeName,
         string $dailyPrice,
@@ -160,17 +167,17 @@ final class RentalRules
         string $rentalType,
         ?int $days
     ): array {
-        $rental = self::rentalCents(self::toCents($dailyPrice), $rentalType, $days);
-        $charging = self::chargingFeeCents(
+        $rentalCents = self::calculateRentalCents(self::convertToCents($dailyPrice), $rentalType, $days);
+        $chargingCents = self::calculateChargingFeeCents(
             $vehicle,
             $garageTypeName,
-            $kwhPrice === null ? null : self::toCents($kwhPrice)
+            $kwhPrice === null ? null : self::convertToCents($kwhPrice)
         );
 
         return [
-            'rental'   => self::fromCents($rental),
-            'charging' => self::fromCents($charging),
-            'total'    => self::fromCents($rental + $charging),
+            'rental'   => self::formatCents($rentalCents),
+            'charging' => self::formatCents($chargingCents),
+            'total'    => self::formatCents($rentalCents + $chargingCents),
         ];
     }
 
@@ -181,12 +188,12 @@ final class RentalRules
      * @return int the amount in cents
      * @throws InvalidArgumentException if the text is not a plain amount
      */
-    public static function toCents(string $amount): int
+    public static function convertToCents(string $amount): int
     {
-        if (preg_match('/^([0-9]+)(?:\.([0-9]{1,2}))?$/', trim($amount), $m) !== 1) {
+        if (preg_match('/^([0-9]+)(?:\.([0-9]{1,2}))?$/', trim($amount), $matches) !== 1) {
             throw new InvalidArgumentException('Not an amount: ' . $amount);
         }
-        return (int)$m[1] * 100 + (int)str_pad($m[2] ?? '', 2, '0');
+        return (int)$matches[1] * 100 + (int)str_pad($matches[2] ?? '', 2, '0');
     }
 
     /**
@@ -195,8 +202,49 @@ final class RentalRules
      * @param int $cents an amount in cents
      * @return string the amount with 2 decimals
      */
-    public static function fromCents(int $cents): string
+    public static function formatCents(int $cents): string
     {
         return intdiv($cents, 100) . '.' . str_pad((string)($cents % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Checks the new end date typed by the admin when extending a rental.
+     * It must be a real date (YYYY-MM-DD) later than the current end date.
+     *
+     * @param string $newEnd the date typed, like "2026-12-05"
+     * @param DateTimeImmutable $oldEnd the current end date of the rental
+     * @return string|null an error message, or null if the date is acceptable
+     */
+    public static function validateNewEnd(string $newEnd, DateTimeImmutable $oldEnd): ?string
+    {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', trim($newEnd));
+        $errors = DateTimeImmutable::getLastErrors();
+        if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            return 'Please enter a valid date.';
+        }
+        if ($date <= $oldEnd->setTime(0, 0)) {
+            return 'The new end date must be later than the current end date (' . $oldEnd->format('Y-m-d') . ').';
+        }
+        return null;
+    }
+
+    /**
+     * Extra price of an extension in cents: every extra day costs the rental's daily price.
+     * ASSUMPTION 5: extra days are charged at the daily price saved with the rental,
+     * also for monthly rentals; the charging fee is not charged again.
+     *
+     * @param int $dailyCents the daily price saved with the rental, in cents
+     * @param DateTimeImmutable $oldEnd the current end date
+     * @param DateTimeImmutable $newEnd the new end date (later than $oldEnd)
+     * @return int the extra amount in cents
+     * @throws InvalidArgumentException if the new end date is not later than the old one
+     */
+    public static function calculateExtensionCents(int $dailyCents, DateTimeImmutable $oldEnd, DateTimeImmutable $newEnd): int
+    {
+        $extraDays = (int)$oldEnd->setTime(0, 0)->diff($newEnd->setTime(0, 0))->format('%r%a');
+        if ($extraDays < 1) {
+            throw new InvalidArgumentException('The new end date must be later than the old end date.');
+        }
+        return $extraDays * $dailyCents;
     }
 }

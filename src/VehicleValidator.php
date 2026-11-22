@@ -1,8 +1,16 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/Vehicle.php';
+
 /**
  * Validates the vehicle part of the rental form. No database code.
+ *
+ * Relations: uses the type constants of Vehicle; called by RentalService
+ * before Vehicle::createFromInput() builds the object.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class VehicleValidator
 {
@@ -33,8 +41,8 @@ final class VehicleValidator
         }
 
         if ($type !== Vehicle::TYPE_BICYCLE) {
-            $plate = self::normalizePlate((string)($data['plate_number'] ?? ''));
-            if (preg_match('/^[A-Z0-9 ]{3,15}$/', $plate) !== 1) {
+            $plateNumber = self::normalizePlate((string)($data['plate_number'] ?? ''));
+            if (preg_match('/^[A-Z0-9 ]{3,15}$/', $plateNumber) !== 1) {
                 $errors['plate_number'] = 'Plate number is required (3 to 15 letters or digits).';
             }
         }
@@ -49,8 +57,8 @@ final class VehicleValidator
         }
 
         if ($type === Vehicle::TYPE_ELECTRIC_CAR) {
-            $battery = trim((string)($data['battery_kwh'] ?? ''));
-            if (preg_match('/^[0-9]{1,4}(\.[0-9]{1,2})?$/', $battery) !== 1 || (float)$battery <= 0) {
+            $batteryKwh = trim((string)($data['battery_kwh'] ?? ''));
+            if (preg_match('/^[0-9]{1,4}(\.[0-9]{1,2})?$/', $batteryKwh) !== 1 || (float)$batteryKwh <= 0) {
                 $errors['battery_kwh'] = 'Battery capacity (kWh) is required for an electric car, for example 40 or 40.5.';
             }
         }

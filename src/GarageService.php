@@ -1,11 +1,19 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/Vehicle.php';
 require_once __DIR__ . '/GarageId.php';
 require_once __DIR__ . '/GarageBatchValidator.php';
 
 /**
  * Creating garages in groups (admin feature).
+ *
+ * Relations: uses GarageBatchValidator (form rules), GarageId (ID numbering) and
+ * Vehicle::GARAGE_ELECTRIC_CAR (kWh price only for electric garages);
+ * reads and writes the garages and garage_types tables through PDO.
+ *
+ * @author Marcella
+ * @version 1.0
  */
 final class GarageService
 {
@@ -34,7 +42,7 @@ final class GarageService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function summary(): array
+    public function findSummary(): array
     {
         return $this->pdo->query(
             'SELECT gt.name AS type_name, g.daily_price, g.kwh_price,
@@ -64,7 +72,7 @@ final class GarageService
      */
     public function createBatch(array $input): array
     {
-        $none = ['first' => null, 'last' => null, 'count' => 0];
+        $emptyResult = ['first' => null, 'last' => null, 'count' => 0];
 
         $typeId = filter_var($input['garage_type_id'] ?? null, FILTER_VALIDATE_INT);
         $typeName = null;
@@ -74,18 +82,18 @@ final class GarageService
             }
         }
         if ($typeName === null) {
-            return ['errors' => ['garage_type_id' => 'Please choose a garage type.']] + $none;
+            return ['errors' => ['garage_type_id' => 'Please choose a garage type.']] + $emptyResult;
         }
 
         $errors = GarageBatchValidator::validate($input, $typeName);
         if (count($errors) > 0) {
-            return ['errors' => $errors] + $none;
+            return ['errors' => $errors] + $emptyResult;
         }
 
         $count = (int)$input['count'];
         $dailyPrice = trim((string)$input['daily_price']);
-        $kwhPrice = $typeName === GarageBatchValidator::ELECTRIC_TYPE ? trim((string)$input['kwh_price']) : null;
-        $prefix = GarageId::prefixFor($typeName);
+        $kwhPrice = $typeName === Vehicle::GARAGE_ELECTRIC_CAR ? trim((string)$input['kwh_price']) : null;
+        $prefix = GarageId::getPrefixFor($typeName);
 
         $this->pdo->beginTransaction();
         try {
@@ -98,24 +106,24 @@ final class GarageService
                  FROM garages WHERE garage_type_id = :id'
             );
             $stmt->execute(['id' => $typeId]);
-            $last = (int)$stmt->fetchColumn();
+            $lastNumber = (int)$stmt->fetchColumn();
 
-            $room = GarageId::MAX_NUMBER - $last;
+            $room = GarageId::MAX_NUMBER - $lastNumber;
             if ($count > $room) {
                 $this->pdo->rollBack();
                 $message = $room <= 0
                     ? 'No more ' . $typeName . ' garages can be created (the limit is ' . GarageId::MAX_NUMBER . ' per type).'
                     : 'Only ' . $room . ' more ' . $typeName . ' garages can be created (the limit is ' . GarageId::MAX_NUMBER . ' per type).';
-                return ['errors' => ['count' => $message]] + $none;
+                return ['errors' => ['count' => $message]] + $emptyResult;
             }
 
             $insert = $this->pdo->prepare(
                 "INSERT INTO garages (id, garage_type_id, daily_price, kwh_price, status)
                  VALUES (:id, :type_id, :daily, :kwh, 'available')"
             );
-            for ($n = $last + 1; $n <= $last + $count; $n++) {
+            for ($garageNumber = $lastNumber + 1; $garageNumber <= $lastNumber + $count; $garageNumber++) {
                 $insert->execute([
-                    'id'      => GarageId::format($prefix, $n),
+                    'id'      => GarageId::formatId($prefix, $garageNumber),
                     'type_id' => $typeId,
                     'daily'   => $dailyPrice,
                     'kwh'     => $kwhPrice,
@@ -132,8 +140,8 @@ final class GarageService
 
         return [
             'errors' => [],
-            'first'  => GarageId::format($prefix, $last + 1),
-            'last'   => GarageId::format($prefix, $last + $count),
+            'first'  => GarageId::formatId($prefix, $lastNumber + 1),
+            'last'   => GarageId::formatId($prefix, $lastNumber + $count),
             'count'  => $count,
         ];
     }

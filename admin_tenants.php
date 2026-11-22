@@ -32,7 +32,7 @@ try {
             http_response_code(400);
             $error = 'Invalid request.';
         } else {
-            $changed = $service->decide($userId, $decision);
+            $changed = $service->decideRegistration($userId, $decision);
             // Post/Redirect/Get: reloading the page will not repeat the action.
             header('Location: admin_tenants.php?msg=' . ($changed ? $decision : 'nochange'));
             exit;
@@ -41,11 +41,11 @@ try {
 
     $pending = $service->findPending();
 } catch (Throwable $e) {
-    error_log($e->getMessage());
+    error_log((string)$e);   // message + file + stack trace, for debugging
     $error = $e instanceof RuntimeException ? $e->getMessage() : 'Something went wrong. Please try again.';
 }
 
-$token = csrfToken();
+$token = getCsrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,8 +65,8 @@ $token = csrfToken();
     <h1>Verify new tenants</h1>
     <p class="muted">Check each NIK against the KTP, then accept or reject the registration.</p>
 
-    <?php if ($flash !== ''): ?><p class="flash" role="status"><?= e($flash) ?></p><?php endif; ?>
-    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= e($error) ?></p><?php endif; ?>
+    <?php if ($flash !== ''): ?><p class="flash" role="status"><?= escapeHtml($flash) ?></p><?php endif; ?>
+    <?php if ($error !== ''): ?><p class="flash error" role="alert"><?= escapeHtml($error) ?></p><?php endif; ?>
 
     <div class="table-wrap">
         <?php if (count($pending) === 0): ?>
@@ -77,22 +77,22 @@ $token = csrfToken();
                     <tr><th>Name</th><th>NIK</th><th>Phone</th><th>Email</th><th>Decision</th></tr>
                 </thead>
                 <tbody>
-                <?php foreach ($pending as $t): ?>
+                <?php foreach ($pending as $tenant): ?>
                     <tr>
-                        <td><?= e($t['full_name']) ?></td>
-                        <td><?= e($t['nik']) ?></td>
-                        <td><?= e($t['phone']) ?></td>
-                        <td><?= e($t['email']) ?></td>
+                        <td><?= escapeHtml($tenant['full_name']) ?></td>
+                        <td><?= escapeHtml($tenant['nik']) ?></td>
+                        <td><?= escapeHtml($tenant['phone']) ?></td>
+                        <td><?= escapeHtml($tenant['email']) ?></td>
                         <td class="actions">
                             <form method="post">
-                                <input type="hidden" name="csrf" value="<?= e($token) ?>">
-                                <input type="hidden" name="user_id" value="<?= (int)$t['user_id'] ?>">
+                                <input type="hidden" name="csrf" value="<?= escapeHtml($token) ?>">
+                                <input type="hidden" name="user_id" value="<?= (int)$tenant['user_id'] ?>">
                                 <input type="hidden" name="decision" value="accepted">
                                 <button type="submit">Accept</button>
                             </form>
                             <form method="post" onsubmit="return confirm('Reject this registration?');">
-                                <input type="hidden" name="csrf" value="<?= e($token) ?>">
-                                <input type="hidden" name="user_id" value="<?= (int)$t['user_id'] ?>">
+                                <input type="hidden" name="csrf" value="<?= escapeHtml($token) ?>">
+                                <input type="hidden" name="user_id" value="<?= (int)$tenant['user_id'] ?>">
                                 <input type="hidden" name="decision" value="rejected">
                                 <button type="submit" class="btn-danger">Reject</button>
                             </form>

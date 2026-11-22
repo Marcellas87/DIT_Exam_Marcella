@@ -2,18 +2,28 @@
 declare(strict_types=1);
 
 /**
+ * Small page helpers: HTML escaping, session, login guard, CSRF token and form errors.
+ * Plain functions (not a class) because every page needs them.
+ *
+ * @author Marcella
+ * @version 1.0
+ */
+
+/**
  * Escapes text for safe output in HTML (protects against XSS).
  *
  * @param mixed $value any value to print
  * @return string the escaped text
  */
-function e($value): string
+function escapeHtml($value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
 /**
  * Starts the PHP session once, with safer cookie settings.
+ *
+ * @return void
  */
 function startSession(): void
 {
@@ -28,7 +38,7 @@ function startSession(): void
  *
  * @return array{id:int,email:string,role:string,full_name:?string}|null
  */
-function currentUser(): ?array
+function getCurrentUser(): ?array
 {
     startSession();
     return $_SESSION['user'] ?? null;
@@ -42,7 +52,7 @@ function currentUser(): ?array
  */
 function requireLogin(?string $role = null): array
 {
-    $user = currentUser();
+    $user = getCurrentUser();
     if ($user === null) {
         header('Location: login.php');
         exit;
@@ -60,7 +70,7 @@ function requireLogin(?string $role = null): array
  *
  * @return string a random token of 64 hex characters
  */
-function csrfToken(): string
+function getCsrfToken(): string
 {
     startSession();
     if (empty($_SESSION['csrf'])) {
@@ -80,4 +90,19 @@ function isValidCsrf($token): bool
 {
     startSession();
     return isset($_SESSION['csrf']) && is_string($token) && hash_equals($_SESSION['csrf'], $token);
+}
+
+/**
+ * Prints the error text under a form field, if there is one.
+ * Shared by every page with a form.
+ *
+ * @param array<string, string> $errors error messages by field name
+ * @param string $field the field to print the error for
+ * @return void
+ */
+function printFieldError(array $errors, string $field): void
+{
+    if (isset($errors[$field])) {
+        echo '<p class="error-text">' . escapeHtml($errors[$field]) . '</p>';
+    }
 }

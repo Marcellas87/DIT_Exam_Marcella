@@ -1,7 +1,5 @@
 .env
 vendor/
 node_modules/
-tools/
-
-README.md
-.gitignore
+storage/payment_proofs/*
+!storage/payment_proofs/.gitkeep

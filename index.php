@@ -21,17 +21,21 @@ $name = $user['full_name'] ?? $user['email'];
         <form method="post" action="logout.php"><button type="submit" class="btn-plain">Log out</button></form>
     </div>
 
-    <h1>Hello, <?= e($name) ?></h1>
-    <p class="muted">You are logged in as <strong><?= e($user['role']) ?></strong>.</p>
+    <h1>Hello, <?= escapeHtml($name) ?></h1>
+    <p class="muted">You are logged in as <strong><?= escapeHtml($user['role']) ?></strong>.</p>
 
     <?php if ($user['role'] === 'admin'): ?>
         <ul>
             <li><a href="admin_tenants.php">Verify new tenants</a></li>
-            <li><a href="admin_garages.php">Create garages</a></li>
-            <li class="muted">Next slices: extend rentals, reports.</li>
+            <li><a href="admin_garage.php">Create garages</a></li>
+            <li><a href="admin_extend.php">Extend a rental</a></li>
+            <li><a href="admin_reports.php">Rental reports</a></li>
         </ul>
     <?php else: ?>
-        <p>Tenant menu (next slices): new rental.</p>
+        <ul>
+            <li><a href="rent.php">Rent a garage</a></li>
+            <li><a href="my_rentals.php">My rentals</a></li>
+        </ul>
     <?php endif; ?>
 </main>
 </body>
