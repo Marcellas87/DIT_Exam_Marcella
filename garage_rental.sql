@@ -132,7 +132,7 @@ CREATE TABLE rental_extensions (
   old_end_date DATE NOT NULL,
   new_end_date DATE NOT NULL,
   extra_amount DECIMAL(12,2) NOT NULL,
-  payment_proof_path VARCHAR(255) NULL,
+  payment_proof_path VARCHAR(255) NOT NULL,
   admin_id INT NOT NULL,
 
   -- An extension must move the end date later (no shortening).
