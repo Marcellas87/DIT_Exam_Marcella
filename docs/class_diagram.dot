@@ -50,6 +50,7 @@ digraph G {
   AuthService -> RegistrationValidator [style=dashed, arrowhead=vee, label="«use»"];
   GarageService -> GarageBatchValidator [style=dashed, arrowhead=vee, label="«use»"];
   GarageService -> GarageId [style=dashed, arrowhead=vee, label="«use»"];
+  GarageService -> Vehicle [style=dashed, arrowhead=vee, label="«use»", constraint=false];
   RentalService -> VehicleValidator [style=dashed, arrowhead=vee, label="«use»"];
   RentalService -> RentalRules [style=dashed, arrowhead=vee, label="«use»"];
   RentalService -> Vehicle [style=dashed, arrowhead=vee, label="«create»"];
@@ -57,8 +58,10 @@ digraph G {
   ReportService -> RentalRules [style=dashed, arrowhead=vee, label="«use»"];
   RentalRules -> Vehicle [style=dashed, arrowhead=vee, label="«use»"];
   VehicleValidator -> Vehicle [style=dashed, arrowhead=vee, label="«use»"];
+  Vehicle -> RentalRules [style=dashed, arrowhead=vee, label="«use»", constraint=false];
+  Vehicle -> VehicleValidator [style=dashed, arrowhead=vee, label="«use»", constraint=false];
   GarageId -> Vehicle [style=dashed, arrowhead=vee, label="«use»"];
   GarageBatchValidator -> Vehicle [style=dashed, arrowhead=vee, label="«use»"];
-  legend [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" COLOR="#888888" BGCOLOR="white"><TR><TD COLSPAN="2" ALIGN="LEFT"><B>Legend</B></TD></TR><TR><TD ALIGN="LEFT">+  public    -  private</TD><TD ALIGN="LEFT"><U>underlined</U> = static</TD></TR><TR><TD ALIGN="LEFT"><I>italic</I> = abstract</TD><TD ALIGN="LEFT">{readOnly} = class constant</TD></TR><TR><TD ALIGN="LEFT">— ▷  inheritance (extends)</TD><TD ALIGN="LEFT">◇— &gt;  aggregation (injected object)</TD></TR><TR><TD ALIGN="LEFT">- - &gt;  dependency («use» / «create»)</TD><TD ALIGN="LEFT">«final» = cannot be extended</TD></TR><TR><TD COLSPAN="2" ALIGN="LEFT"><FONT POINT-SIZE="9">PDO and DateTimeImmutable are PHP built-in classes. Pages (*.php in the root) create the services;<BR ALIGN="LEFT"/>admin_reports.php uses ReportInput. helpers.php holds functions only (no class).</FONT></TD></TR></TABLE>>];
+  legend [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" COLOR="#888888" BGCOLOR="white"><TR><TD COLSPAN="2" ALIGN="LEFT"><B>Legend</B></TD></TR><TR><TD ALIGN="LEFT">+  public    -  private</TD><TD ALIGN="LEFT"><U>underlined</U> = static</TD></TR><TR><TD ALIGN="LEFT"><I>italic</I> = abstract</TD><TD ALIGN="LEFT">{readOnly} = class constant</TD></TR><TR><TD ALIGN="LEFT">— ▷  inheritance (extends)</TD><TD ALIGN="LEFT">◇— &gt;  aggregation (injected object)</TD></TR><TR><TD ALIGN="LEFT">- - &gt;  dependency («use» / «create»)</TD><TD ALIGN="LEFT">«final» = cannot be extended</TD></TR><TR><TD COLSPAN="2" ALIGN="LEFT"><FONT POINT-SIZE="9">PDO and DateTimeImmutable are PHP built-in classes. Pages (*.php in the root) create the services;<BR ALIGN="LEFT"/>admin_reports.php uses ReportInput. helpers.php holds functions only (no class).<BR ALIGN="LEFT"/>Vehicle and RentalRules / VehicleValidator use each other (battery in cents, plate cleaning).<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
   PaymentProofStorage -> legend [style=invis];
 }
