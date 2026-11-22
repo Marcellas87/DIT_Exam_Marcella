@@ -108,8 +108,8 @@ try {
     $extendedRentalId = $createDatedRental($carGarageIds[0], ['vehicle_type' => 'car', 'plate_number' => 'ZZ 1' . strtoupper($uniqueTag)], '1', '2031-03-20');   // 80000
     $createDatedRental($carGarageIds[1], ['vehicle_type' => 'car', 'plate_number' => 'ZZ 2' . strtoupper($uniqueTag)], '1', '2030-12-31');                       // 80000, other year
     $insertExtension = $pdo->prepare('INSERT INTO rental_extensions (rental_id, old_end_date, new_end_date, extra_amount, payment_proof_path, admin_id) VALUES (?, ?, ?, ?, ?, ?)');
-    $insertExtension->execute([$extendedRentalId, '2031-03-21', '2031-03-22', '10000.00', null, $adminId]);   // two extensions on one rental
-    $insertExtension->execute([$extendedRentalId, '2031-03-22', '2031-03-25', '30000.00', null, $adminId]);
+    $insertExtension->execute([$extendedRentalId, '2031-03-21', '2031-03-22', '10000.00', 'test-proof.png', $adminId]);   // two extensions on one rental
+    $insertExtension->execute([$extendedRentalId, '2031-03-22', '2031-03-25', '30000.00', 'test-proof.png', $adminId]);
 
     // ---- per month ----
     $monthlyReport = $reportService->buildMonthlyReport(2031);
